@@ -68,7 +68,8 @@ Number exact_solution (const Point & p,
   const Real y = p(1);
   const Real z = p(2);
 
-  return (x+1)*(1.-y*y)*(1.-z*z);
+  // return (x+1)*(1-y*y)*(1-z*z);
+  return (x+1)*(1-y*y);
 }
 
 // We now define the gradient of the exact solution, again being careful
@@ -85,11 +86,11 @@ Gradient exact_derivative(const Point & p,
   // x and y coordinates in space
   const Real x = p(0);
   const Real y = p(1);
-  const Real z = p(2);
+  // const Real z = p(2);
 
-  gradu(0) = (1.-y*y)*(1.-z*z);
-  gradu(1) = -2*y*(x+1)*(1.-z*z);
-  gradu(2) = -2*z*(x+1)*(1.-y*y);
+  gradu(0) = (1-y*y);
+  gradu(1) = -2*y*(x+1);
+  gradu(2) = 0;
 
   return gradu;
 }
@@ -101,9 +102,10 @@ Number exact_laplacian (const Point & p,
 {
   const Real x = p(0);
   const Real y = p(1);
-  const Real z = p(2);
+  // const Real z = p(2);
 
-  return -2*(x+1)*(1.-z*z) - 2*(x+1)*(1.-y*y);
+  // return -2*(x+1)*(1-z*z) - 2*(x+1)*(1-y*y);
+  return -2*(x+1);
 }
 
 // We now define the matrix assembly function for the
@@ -569,10 +571,12 @@ int main (int argc, char** argv)
   // Initialize the data structures for the equation system
   equation_system.init();
 
+
   // Construct ExactSolution object and attach solution functions
   ExactSolution exact_sol(equation_system);
   exact_sol.attach_exact_value(exact_solution);
   exact_sol.attach_exact_deriv(exact_derivative);
+  // exact_sol.extra_quadrature_order(1);
 
   // A refinement loop.
   for (unsigned int rstep=0; rstep<uniform_refinement_steps; ++rstep)
