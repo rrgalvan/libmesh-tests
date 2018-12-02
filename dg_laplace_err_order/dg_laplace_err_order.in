@@ -2,7 +2,7 @@
 singularity = true
 
 # In what dimension
-dimension = 3
+dimension = 2
 
 # With what elements ("tensor", "simplex")
 element_type = tensor
@@ -14,7 +14,7 @@ p_order = 1
 refinement_type = h
 
 # Number of uniform refinement steps
-uniform_h_r_steps = 5
+uniform_h_r_steps = 4
 
 # Maximum number of adaptive refinement steps
 max_adaptive_r_steps = 3

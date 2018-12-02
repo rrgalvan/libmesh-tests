@@ -10,6 +10,7 @@ include $(LIBMESH_DIR)/Make.common
 
 target     := ./example-$(METHOD)
 
+# libmesh_CXXFLAGS := $(libmesh_CXXFLAGS) -Werror
 
 ###############################################################################
 # File management.  This is where the source, header, and object files are
@@ -49,7 +50,7 @@ dust:
 clean: dust
 	@rm -f $(objects) *.$(obj-suffix) *.lo
 
-clobber: clean 
+clobber: clean
 	@rm -f $(target)
 
 distclean: clean
