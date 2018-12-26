@@ -1,5 +1,5 @@
-#ifndef LIBMESH_FE
-#define LIBMESH_FE
+#ifndef FE_WRAPPER
+#define FE_WRAPPER
 
 #include "libmesh/libmesh.h"
 using namespace libMesh;
@@ -27,9 +27,9 @@ struct FE_Wrapper {
   // the element degrees of freedom get mapped.
   std::vector<dof_id_type> dof_indices;
   // Number of degrees of freedom. Set by reset() method.
-  unsigned int n_dofs;
+  unsigned int _n_dofs;
 
-FE_Wrapper(std::unique_ptr<FEBase>&& fe_, QGauss* qrule_=0):
+FE_Wrapper(std::unique_ptr<FEBase>&& fe_, QGauss* qrule_):
   fe(std::move(fe_)),
   qrule(qrule_),
   JxW(fe->get_JxW()),
@@ -38,10 +38,10 @@ FE_Wrapper(std::unique_ptr<FEBase>&& fe_, QGauss* qrule_=0):
   qrule_points(fe->get_xyz()),
   qrule_normals(fe->get_normals()),
   dof_indices(),
-  n_dofs((unsigned int) -1)
+  _n_dofs((unsigned int) -1)//,
+  // n_quad_points(qrule_->n_points())
   {
-    if(qrule)
-      fe->attach_quadrature_rule(qrule_);
+    fe->attach_quadrature_rule(qrule_);
   }
 
   // Reinit element from a DofMap
@@ -51,9 +51,16 @@ FE_Wrapper(std::unique_ptr<FEBase>&& fe_, QGauss* qrule_=0):
       // for the current element.  These define where in the global
       // matrix and right-hand-side this element will contribute to.
       dof_map.dof_indices(element, dof_indices);
-      n_dofs = dof_indices.size();
+      _n_dofs = dof_indices.size();
   }
+
+  unsigned int n_dofs() const { return _n_dofs; };
+  unsigned int n_quad_points() const { return qrule->n_points(); }
 
 };
 
-#endif // LIBMESH_FE
+#endif // FE_WRAPPER
+
+// Local Variables:
+// mode: c++
+// End:

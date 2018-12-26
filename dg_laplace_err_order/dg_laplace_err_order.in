@@ -10,11 +10,11 @@ element_type = tensor
 # minimum approximation order
 p_order = 1
 
-4 Mesh refinement type: h, p, or hp
+# Mesh refinement type: h, p, or hp
 refinement_type = h
 
 # Number of uniform refinement steps
-uniform_h_r_steps = 4
+uniform_h_r_steps = 2
 
 # Maximum number of adaptive refinement steps
 max_adaptive_r_steps = 3

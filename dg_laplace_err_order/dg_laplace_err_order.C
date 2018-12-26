@@ -15,8 +15,6 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
-
 // <h1>Interior Penalty Discontinuous Galerkin</h1>
 // \author Lorenzo Botti
 // \date 2010
@@ -56,7 +54,8 @@
 #include "libmesh/exact_solution.h"
 
 #include "fe_wrapper.h"
-// #include "dg_element_neighbor_coupling.h"
+#include "dg_facecoupling.h"
+#include "dg_faceterm.h"
 
 //#define QORDER TWENTYSIXTH
 
@@ -158,7 +157,7 @@ void assemble_ellipticdg(EquationSystems & es,
 
   FE_Wrapper fe( FEBase::build(dim, fe_type), &qrule );
   FE_Wrapper fe_elem_face( FEBase::build(dim, fe_type), &qface );
-  FE_Wrapper fe_neighbor_face( FEBase::build(dim, fe_type) );
+  FE_Wrapper fe_neighbor_face( FEBase::build(dim, fe_type), &qface );
 
   // Local matrix and right-hand-side vector
   DenseMatrix<Number> Ke;
@@ -185,22 +184,22 @@ void assemble_ellipticdg(EquationSystems & es,
       // summing them.  We use the resize member here because
       // the number of degrees of freedom might have changed from
       // the last element.
-      Ke.resize(fe.n_dofs, fe.n_dofs);
-      Fe.resize(fe.n_dofs);
+      Ke.resize(fe.n_dofs(), fe.n_dofs());
+      Fe.resize(fe.n_dofs());
 
       // Now we will build the element interior matrix.  This involves
       // a double loop to integrate the test functions (i) against
       // the trial functions (j).
-      for (unsigned int qp=0; qp<fe.qrule->n_points(); qp++)
-        for (unsigned int i=0; i<fe.n_dofs; i++)
-          for (unsigned int j=0; j<fe.n_dofs; j++)
+      for (unsigned int qp=0; qp<fe.n_quad_points(); qp++)
+        for (unsigned int i=0; i<fe.n_dofs(); i++)
+          for (unsigned int j=0; j<fe.n_dofs(); j++)
 	    {
 	      Ke(i,j) += fe.JxW[qp]*(fe.dphi[i][qp]*fe.dphi[j][qp]);
 	    }
 
       // Now we will build the RHS force
-      for (unsigned int qp=0; qp<fe.qrule->n_points(); qp++)
-        for (unsigned int i=0; i<fe.n_dofs; i++)
+      for (unsigned int qp=0; qp<fe.n_quad_points(); qp++)
+        for (unsigned int i=0; i<fe.n_dofs(); i++)
 	  {
 	    Fe(i) += -fe.JxW[qp]*exact_laplacian(fe.qrule_points[qp],
 						 es.parameters, "null", "void")*fe.phi[i][qp];
@@ -225,8 +224,8 @@ void assemble_ellipticdg(EquationSystems & es,
   		= elem->volume()/elem_side->volume() * 1./pow(elem_b_order, 2.);
 
   	      // Integrate in element face
-  	      auto const n_dofs = fe.n_dofs;
-  	      auto const n_face_points = fe_elem_face.qrule->n_points();
+  	      auto const n_dofs = fe.n_dofs();
+  	      auto const n_face_points = fe_elem_face.n_quad_points();
               for (unsigned int qp=0; qp<n_face_points; qp++)
                 {
 		  auto const& weight = fe_elem_face.JxW[qp];
@@ -326,8 +325,8 @@ void assemble_ellipticdg(EquationSystems & es,
   		  // // Coupling between element and its neighbor through a common face
   		  // DG_FaceCoupling dg_face(dof_indices, neighbor_dof_indices, JxW_face);
 
-  		  const auto n_dofs = fe.n_dofs;
-  		  const auto n_neighbor_dofs = fe_neighbor_face.n_dofs;
+  		  const auto n_dofs = fe.n_dofs();
+  		  const auto n_neighbor_dofs = fe_neighbor_face.n_dofs();
 
                   Kne.resize (n_neighbor_dofs, n_dofs);
                   Ken.resize (n_dofs, n_neighbor_dofs);
@@ -337,7 +336,7 @@ void assemble_ellipticdg(EquationSystems & es,
   		  // Now we will build the element and neighbor
                   // boundary matrices.  This involves a double loop
                   // to integrate the test functions
-  		  auto n_face_points = fe_elem_face.qrule->n_points();
+  		  auto n_face_points = fe_elem_face.n_quad_points();
   		  for (unsigned int qp=0; qp<n_face_points; qp++)
                     {
   		      auto const& weight = fe_elem_face.JxW[qp];
