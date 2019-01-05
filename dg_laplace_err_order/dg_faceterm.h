@@ -3,9 +3,9 @@
 
 #include "dg_facecoupling.h"
 
-class DG_FaceTerm {
+class DG_Term {
 public:
-  DG_FaceTerm(const DG_FaceCoupling& face_coupling) :
+  DG_Term(const DG_FaceCoupling& face_coupling) :
     _face(face_coupling)
   {}
   // void set_dg_face_coupling(DG_FaceCoupling *face_coupling) {
@@ -15,8 +15,7 @@ protected:
   const DG_FaceCoupling& _face;
 };
 
-// template<CoupledElement Elem1, CoupledElement Elem2, typename ConcreteFaceTerm> void
-// DG_FaceTerm<ConcreteFaceTerm>::integrate_on_coupling(DG_FaceCoupling& face_coupling) {
+// DG_Term<ConcreteTerm>::integrate_on_coupling(DG_FaceCoupling& face_coupling) {
 //   const int n_dofs_1 = face.fe<Elem1>().n_dofs;
 //   for (unsigned int i=0; i<n_dofs_1; i++)
 //     {
@@ -28,78 +27,152 @@ protected:
 //     }
 // }
 
-class SIP_BilinearForm: public DG_FaceTerm
+class SIP_BilinearForm: public DG_Term
 {
 public:
   SIP_BilinearForm(const DG_FaceCoupling& face_coupling,
 		   double penalty, double h_elem):
-    DG_FaceTerm(face_coupling),
+    DG_Term(face_coupling),
     _penalty(penalty),
     _h_elem(h_elem) {}
 
-  template <CoupledElement Elem1, CoupledElement Elem2>
-  Number value(unsigned int i, unsigned int j);
+  // // Integrate term on a face
+  // void integrate(DG_FaceCoupling*);
+
+  // Evalate bilinear form (at current qudrature point) for the
+  // unknown basis function id_u and the test basis function id_test
+  Number inline value_plus_plus(unsigned int id_u, unsigned int id_test) const;
+  Number inline value_plus_minus(unsigned int id_u, unsigned int id_test) const;
+  Number inline value_minus_plus(unsigned int id_u, unsigned int id_test) const;
+  Number inline value_minus_minus(unsigned int id_u, unsigned int id_test) const;
+
+  // template <CoupledElement Elem1, CoupledElement Elem2>
+  // Number value(unsigned int id_u, unsigned int id_test) const;
 private:
   const double _penalty;
   const double _h_elem;
 };
 
-template <> Number
-SIP_BilinearForm::value<PLUS,PLUS>(unsigned int unknown_id, unsigned int test_id)
+
+template <> Number inline
+SIP_BilinearForm::value<PLUS,PLUS>(unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
   auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
   // Unknown
-  auto const& u  = _face.fe<PLUS>().phi[unknown_id] [_face.qp()];
-  auto const& du = _face.fe<PLUS>().dphi[unknown_id][_face.qp()]; // Gradient
+  auto const& u  = _face.fe<PLUS>().phi[id_u] [_face.qp()];
+  auto const& du = _face.fe<PLUS>().dphi[id_u][_face.qp()]; // Gradient
   // Test function
-  auto const& v  = _face.fe<PLUS>().phi[test_id] [_face.qp()];
-  auto const& dv = _face.fe<PLUS>().dphi[test_id][_face.qp()]; // Gradient
+  auto const& v  = _face.fe<PLUS>().phi[id_test] [_face.qp()];
+  auto const& dv = _face.fe<PLUS>().dphi[id_test][_face.qp()]; // Gradient
 
   return -0.5 * (v*(du*normal) + u*(dv*normal)) + (_penalty/_h_elem)*u*v;
 }
 
-template <> Number
-SIP_BilinearForm::value<PLUS,MINUS>(unsigned int unknown_id, unsigned int test_id)
+template <> Number inline
+SIP_BilinearForm::value<PLUS,MINUS>(unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
   auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
   // Unknown
-  auto const& u  = _face.fe<PLUS>().phi[unknown_id] [_face.qp()];
-  auto const& du = _face.fe<PLUS>().dphi[unknown_id][_face.qp()]; // Gradient
+  auto const& u  = _face.fe<PLUS>().phi[id_u] [_face.qp()];
+  auto const& du = _face.fe<PLUS>().dphi[id_u][_face.qp()]; // Gradient
   // Test function
-  auto const& v  = _face.fe<MINUS>().phi[test_id] [_face.qp()];
-  auto const& dv = _face.fe<MINUS>().dphi[test_id][_face.qp()]; // Gradient
+  auto const& v  = _face.fe<MINUS>().phi[id_test] [_face.qp()];
+  auto const& dv = _face.fe<MINUS>().dphi[id_test][_face.qp()]; // Gradient
+
+  return 0.5 * (v*(du*normal) - u*(dv*normal)) - (_penalty/_h_elem)*u*v;
+}
+
+template <> Number inline
+SIP_BilinearForm::value<MINUS,PLUS>(unsigned int id_u, unsigned int id_test) const
+{
+  // Normal vector, considered in PLUS orientation
+  auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
+  // Unknown
+  auto const& u  = _face.fe<MINUS>().phi[id_u] [_face.qp()];
+  auto const& du = _face.fe<MINUS>().dphi[id_u][_face.qp()]; // Gradient
+  // Test function
+  auto const& v  = _face.fe<PLUS>().phi[id_test] [_face.qp()];
+  auto const& dv = _face.fe<PLUS>().dphi[id_test][_face.qp()]; // Gradient
+
+  return 0.5 * (-v*(du*normal) + u*(dv*normal)) - (_penalty/_h_elem)*u*v;
+}
+
+template <> Number inline
+SIP_BilinearForm::value<MINUS,MINUS>(unsigned int id_u, unsigned int id_test) const
+{
+  // Normal vector, considered in PLUS orientation
+  auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
+  // Unknown
+  auto const& u  = _face.fe<MINUS>().phi[id_u] [_face.qp()];
+  auto const& du = _face.fe<MINUS>().dphi[id_u][_face.qp()]; // Gradient
+  // Test function
+  auto const& v  = _face.fe<MINUS>().phi[id_test] [_face.qp()];
+  auto const& dv = _face.fe<MINUS>().dphi[id_test][_face.qp()]; // Gradient
+
+  return 0.5 * (v*(du*normal) + u*(dv*normal)) + (_penalty/_h_elem)*u*v;
+}
+
+//----------------------------------------------------------------------
+
+
+template <> Number inline
+SIP_BilinearForm::value_plus_plus(unsigned int id_u, unsigned int id_test) const
+{
+  // Normal vector, considered in PLUS orientation
+  auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
+  // Unknown
+  auto const& u  = _face.fe<PLUS>().phi[id_u] [_face.qp()];
+  auto const& du = _face.fe<PLUS>().dphi[id_u][_face.qp()]; // Gradient
+  // Test function
+  auto const& v  = _face.fe<PLUS>().phi[id_test] [_face.qp()];
+  auto const& dv = _face.fe<PLUS>().dphi[id_test][_face.qp()]; // Gradient
+
+  return -0.5 * (v*(du*normal) + u*(dv*normal)) + (_penalty/_h_elem)*u*v;
+}
+
+template <> Number inline
+SIP_BilinearForm::value_plus_minus(unsigned int id_u, unsigned int id_test) const
+{
+  // Normal vector, considered in PLUS orientation
+  auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
+  // Unknown
+  auto const& u  = _face.fe<PLUS>().phi[id_u] [_face.qp()];
+  auto const& du = _face.fe<PLUS>().dphi[id_u][_face.qp()]; // Gradient
+  // Test function
+  auto const& v  = _face.fe<MINUS>().phi[id_test] [_face.qp()];
+  auto const& dv = _face.fe<MINUS>().dphi[id_test][_face.qp()]; // Gradient
 
   return 0.5 * (v*(du*normal) - u*(dv*normal)) - (_penalty/_h_elem)*u*v;
 }
 
 template <> Number
-SIP_BilinearForm::value<MINUS,PLUS>(unsigned int unknown_id, unsigned int test_id)
+SIP_BilinearForm::value_minus_plus(unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
   auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
   // Unknown
-  auto const& u  = _face.fe<MINUS>().phi[unknown_id] [_face.qp()];
-  auto const& du = _face.fe<MINUS>().dphi[unknown_id][_face.qp()]; // Gradient
+  auto const& u  = _face.fe<MINUS>().phi[id_u] [_face.qp()];
+  auto const& du = _face.fe<MINUS>().dphi[id_u][_face.qp()]; // Gradient
   // Test function
-  auto const& v  = _face.fe<PLUS>().phi[test_id] [_face.qp()];
-  auto const& dv = _face.fe<PLUS>().dphi[test_id][_face.qp()]; // Gradient
+  auto const& v  = _face.fe<PLUS>().phi[id_test] [_face.qp()];
+  auto const& dv = _face.fe<PLUS>().dphi[id_test][_face.qp()]; // Gradient
 
   return 0.5 * (-v*(du*normal) + u*(dv*normal)) - (_penalty/_h_elem)*u*v;
 }
 
 template <> Number
-SIP_BilinearForm::value<MINUS,MINUS>(unsigned int unknown_id, unsigned int test_id)
+SIP_BilinearForm::value_minus_minus(unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
   auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
   // Unknown
-  auto const& u  = _face.fe<MINUS>().phi[unknown_id] [_face.qp()];
-  auto const& du = _face.fe<MINUS>().dphi[unknown_id][_face.qp()]; // Gradient
+  auto const& u  = _face.fe<MINUS>().phi[id_u] [_face.qp()];
+  auto const& du = _face.fe<MINUS>().dphi[id_u][_face.qp()]; // Gradient
   // Test function
-  auto const& v  = _face.fe<MINUS>().phi[test_id] [_face.qp()];
-  auto const& dv = _face.fe<MINUS>().dphi[test_id][_face.qp()]; // Gradient
+  auto const& v  = _face.fe<MINUS>().phi[id_test] [_face.qp()];
+  auto const& dv = _face.fe<MINUS>().dphi[id_test][_face.qp()]; // Gradient
 
   return 0.5 * (v*(du*normal) + u*(dv*normal)) + (_penalty/_h_elem)*u*v;
 }

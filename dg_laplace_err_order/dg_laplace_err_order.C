@@ -55,7 +55,7 @@
 
 #include "fe_wrapper.h"
 #include "dg_facecoupling.h"
-#include "dg_faceterm.h"
+// #include "dg_faceterm.h"
 
 //#define QORDER TWENTYSIXTH
 
@@ -98,10 +98,10 @@ Gradient exact_derivative(const Point & p,
   return gradu;
 }
 
-Number exact_laplacian (const Point & p,
-			const Parameters &,
-			const std::string &,
-			const std::string &)
+Number exact_laplacian ( const Point & p,
+			 const Parameters &,
+			 const std::string &,
+			 const std::string & )
 {
   const Real x = p(0);
   // const Real y = p(1);
@@ -322,103 +322,15 @@ void assemble_ellipticdg(EquationSystems & es,
                   // matrix this neighbor will contribute to.
   		  fe_neighbor_face.init_dofs(neighbor, dof_map);
 
-  		  // // Coupling between element and its neighbor through a common face
-  		  // DG_FaceCoupling dg_face(dof_indices, neighbor_dof_indices, JxW_face);
-
-  		  const auto n_dofs = fe.n_dofs();
-  		  const auto n_neighbor_dofs = fe_neighbor_face.n_dofs();
-
-                  Kne.resize (n_neighbor_dofs, n_dofs);
-                  Ken.resize (n_dofs, n_neighbor_dofs);
-                  Kee.resize (n_dofs, n_dofs);
-                  Knn.resize (n_neighbor_dofs, n_neighbor_dofs);
-
-  		  // Now we will build the element and neighbor
-                  // boundary matrices.  This involves a double loop
-                  // to integrate the test functions
-  		  auto n_face_points = fe_elem_face.n_quad_points();
-  		  for (unsigned int qp=0; qp<n_face_points; qp++)
-                    {
-  		      auto const& weight = fe_elem_face.JxW[qp];
-  		      auto const& normal = fe_elem_face.qrule_normals[qp];
-                      // Kee Matrix. Integrate the element test function i
-                      // against the element test function j
-                      for (unsigned int i=0; i<n_dofs; i++)
-                        {
-  			  auto const& v  = fe_elem_face.phi[i][qp];
-  			  auto const& dv = fe_elem_face.dphi[i][qp];
-  			  for (unsigned int j=0; j<n_dofs; j++)
-                            {
-  			      auto const& u  = fe_elem_face.phi[j][qp];
-  			      auto const& du = fe_elem_face.dphi[j][qp];
-                              // consistency
-                              Kee(i,j) -= 0.5 * weight * (u*(normal*dv) + v*(normal*du));
-                              // stability
-  			      Kee(i,j) += weight* penalty/h_elem * u*v;
-  			    }
-                        }
-
-                      // Knn Matrix. Integrate the neighbor test function i
-                      // against the neighbor test function j
-                      for (unsigned int i=0; i<n_neighbor_dofs; i++)
-                        {
-  			  auto const& v  = fe_neighbor_face.phi[i][qp];
-  			  auto const& dv = fe_neighbor_face.dphi[i][qp];
-                          for (unsigned int j=0; j<n_neighbor_dofs; j++)
-                            {
-  			      auto const& u  = fe_neighbor_face.phi[j][qp];
-  			      auto const& du = fe_neighbor_face.dphi[j][qp];
-                              // consistency
-                              Knn(i,j) += 0.5 * weight * (u*(normal*dv) + v*(normal*du));
-                              // stability
-                              Knn(i,j) += weight * penalty/h_elem * u*v;
-                            }
-                        }
-
-                      // Kne Matrix. Integrate the neighbor test function i
-                      // against the element test function j
-                      for (unsigned int i=0; i<n_neighbor_dofs; i++)
-                        {
-  			  auto const& v  = fe_neighbor_face.phi[i][qp];
-  			  auto const& dv = fe_neighbor_face.dphi[i][qp];
-                          for (unsigned int j=0; j<n_dofs; j++)
-                            {
-  			      auto const& u  = fe_elem_face.phi[j][qp];
-  			      auto const& du = fe_elem_face.dphi[j][qp];
-			      // consistency
-                              Kne(i,j) += 0.5 * weight * (v*(normal*du) - u*(normal*dv));
-                              // stability
-                              Kne(i,j) -= weight * penalty/h_elem * u*v;
-                            }
-                        }
-
-                      // Ken Matrix. Integrate the element test function i
-                      // against the neighbor test function j
-                      for (unsigned int i=0; i<n_dofs; i++)
-                        {
-  			  auto const& v  = fe_elem_face.phi[i][qp];
-  			  auto const& dv = fe_elem_face.dphi[i][qp];
-                          for (unsigned int j=0; j<n_neighbor_dofs; j++)
-                            {
-  			      auto const& u  = fe_neighbor_face.phi[j][qp];
-  			      auto const& du = fe_neighbor_face.dphi[j][qp];
-                              // consistency
-                              Ken(i,j) += 0.5 * weight * (u*(normal*dv) - v*(normal*du));
-                              // stability
-                              Ken(i,j) -= weight * penalty/h_elem * u*v;
-                            }
-                        }
-                    }
+		  DG_FaceCoupling face_coupling(fe_elem_face, fe_neighbor_face);
+		  SIP_BilinearForm a_sip(face_coupling, penalty, h_elem);
+		  FaceIntegrator<SIP_BilinearForm> a_sip_integrator(a_sip);
+		  a_sip_integrator.integrate();
 
                   // The element and neighbor boundary matrix are now built
                   // for this side.  Add them to the global matrix
                   // The SparseMatrix::add_matrix() members do this for us.
-  		  const auto dof_indices = fe.dof_indices;
-  		  const auto neighbor_dof_indices = fe_neighbor_face.dof_indices;
-                  ellipticdg_system.matrix->add_matrix(Kne, neighbor_dof_indices, dof_indices);
-                  ellipticdg_system.matrix->add_matrix(Ken, dof_indices, neighbor_dof_indices);
-                  ellipticdg_system.matrix->add_matrix(Kee, dof_indices);
-                  ellipticdg_system.matrix->add_matrix(Knn, neighbor_dof_indices);
+		  a_sip_integrator.save_to_system(ellipticdg_system);
                 }
             }
         }
