@@ -32,7 +32,7 @@ class DG_FaceCoupling
   unsigned int qp() const { return _qp; }
 
   // Save local matrices and RHS to global values in a System
-  void save_to_system(LinearImplicitSystem& sys);
+  void add_to_system(LinearImplicitSystem& sys);
 
  private:
   const FE_Wrapper& _fe_plus;
@@ -47,29 +47,6 @@ DG_FaceCoupling::fe<PLUS>() const { return _fe_plus; }
 template <> inline FE_Wrapper const&
 DG_FaceCoupling::fe<MINUS>() const { return _fe_minus; }
 
-// template <class DG_Term> void
-// DG_FaceCoupling::integrate_bilinear_term(DG_Term const& term)
-// {
-//   for (_qp=0; _qp<n_quad_points(); _qp++) // Integrate on face
-//     {
-//       const auto weight = fe<PLUS>().JxW[_qp];
-//       add_term<PLUS, PLUS, DG_Term>(term, weight);
-//       add_term<PLUS, MINUS,DG_Term>(term, weight);
-//       add_term<MINUS,PLUS, DG_Term>(term, weight);
-//       add_term<MINUS,MINUS,DG_Term>(term, weight);
-//     }
-// }
-
-// void DG_FaceCoupling::save_to_system(LinearImplicitSystem& system)
-// {
-//   const auto& dofs_plus  = _fe_plus.dof_indices;
-//   const auto& dofs_minus = _fe_minus.dof_indices;
-//   system.matrix->add_matrix(_K_plus_plus, dofs_plus);
-//   system.matrix->add_matrix(_K_plus_minus, dofs_plus, dofs_minus);
-//   system.matrix->add_matrix(_K_minus_plus, dofs_minus, dofs_plus);
-//   system.matrix->add_matrix(_K_minus_minus, dofs_minus);
-// }
-
 //----------------------------------------------------------------------
 
 class DG_Term
@@ -81,29 +58,6 @@ public:
 protected:
   const DG_FaceCoupling& _face;
 };
-// class DG_Term {
-// public:
-//   DG_Term(const DG_FaceCoupling& face_coupling) :
-//     _face(face_coupling)
-//   {}
-//   // void set_dg_face_coupling(DG_FaceCoupling *face_coupling) {
-//   //   _face=face_coupling;
-//   // }
-// protected:
-//   const DG_FaceCoupling& _face;
-// };
-
-// DG_Term<ConcreteTerm>::integrate_on_coupling(DG_FaceCoupling& face_coupling) {
-//   const int n_dofs_1 = face.fe<Elem1>().n_dofs;
-//   for (unsigned int i=0; i<n_dofs_1; i++)
-//     {
-//       const int n_dofs_2 = fe<Elem2>().n_dofs;
-//       for (unsigned int j=0; j<n_dofs_2; j++)
-// 	{
-// 	  face_coupling.add_value_to_matrix<Elem1,Elem2>(i, j, value<Elem1,Elem2>(i,j));
-//
-//     }
-// }
 
 class SIP_BilinearForm: public DG_Term
 {
@@ -404,10 +358,10 @@ FaceIntegrator<Term>::add_values_to_matrix(Number const& weight)
       const unsigned int n_dofs_2 = _face.fe<Elem2>().n_dofs();
       for (unsigned int j=0; j<n_dofs_2; j++)
 	{
+	  // Number value = _term.value<Elem1,Elem2>(i,j);
+	  Number value = face_select<Elem1,Elem2>::evaluate(_term,i,j);
 	  DenseMatrix<Number>& K = face_select<Elem1,Elem2>::matrix(this);
-	  auto value = face_select<Elem1,Elem2>::evaluate(_term,i,j);
-	  // auto value = _term.value<Elem1,Elem2>(i,j);
-	  K(i,j) += weight * value;
+	  K(i,j) += weight*value;
 	}
     }
 }
