@@ -14,7 +14,7 @@ p_order = 1
 refinement_type = h
 
 # Number of uniform refinement steps
-uniform_h_r_steps = 2
+uniform_h_r_steps = 5
 
 # Maximum number of adaptive refinement steps
 max_adaptive_r_steps = 3

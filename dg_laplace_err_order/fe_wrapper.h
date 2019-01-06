@@ -44,13 +44,20 @@ FE_Wrapper(std::unique_ptr<FEBase>&& fe_, QGauss* qrule_):
     fe->attach_quadrature_rule(qrule_);
   }
 
-  // Reinit element from a DofMap
+  // Reinit element degrees of freedom from a DofMap
   void init_dofs(const Elem* element, const DofMap & dof_map)
   {
       // Compute (in this->dof_indices) the degrees of freedom indices
       // for the current element.  These define where in the global
       // matrix and right-hand-side this element will contribute to.
       dof_map.dof_indices(element, dof_indices);
+      _n_dofs = dof_indices.size();
+  }
+
+  // Reinit element degrees of freedom from a given vector of dof indices
+  void init_dofs(const std::vector<dof_id_type>& dof_indices)
+  {
+      this->dof_indices = dof_indices;
       _n_dofs = dof_indices.size();
   }
 

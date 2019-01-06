@@ -10,7 +10,7 @@ typedef enum {PLUS, MINUS} CoupledElement;
 class DG_FaceCoupling
 {
  public:
- DG_FaceCoupling(FE_Wrapper  const& fe_plus, FE_Wrapper const& fe_minus):
+ DG_FaceCoupling(FE_Wrapper const& fe_plus, FE_Wrapper const& fe_minus):
    _fe_plus(fe_plus), _fe_minus(fe_minus), _n_quad_points(_fe_plus.n_quad_points())
   {
     assert(_fe_plus.n_quad_points() == _fe_minus.n_quad_points());
@@ -73,10 +73,10 @@ public:
 
   // Evalate bilinear form (at current qudrature point) for the
   // unknown basis function id_u and the test basis function id_test
-  Number inline value_plus_plus(unsigned int id_u, unsigned int id_test) const;
-  Number inline value_plus_minus(unsigned int id_u, unsigned int id_test) const;
-  Number inline value_minus_plus(unsigned int id_u, unsigned int id_test) const;
-  Number inline value_minus_minus(unsigned int id_u, unsigned int id_test) const;
+  Number inline value_plus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
+  Number inline value_plus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
+  Number inline value_minus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
+  Number inline value_minus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
 
   template <CoupledElement Elem1, CoupledElement Elem2>
   Number value(unsigned int id_u, unsigned int id_test) const;
@@ -149,61 +149,61 @@ SIP_BilinearForm::value<MINUS,MINUS>(unsigned int id_u, unsigned int id_test) co
 
 
 Number inline
-SIP_BilinearForm::value_plus_plus(unsigned int id_u, unsigned int id_test) const
+SIP_BilinearForm::value_plus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
-  auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
+  auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
   // Unknown
-  auto const& u  = _face.fe<PLUS>().phi[id_u] [_face.qp()];
-  auto const& du = _face.fe<PLUS>().dphi[id_u][_face.qp()]; // Gradient
+  auto const& u  = _face.fe<PLUS>().phi[id_u] [qp];
+  auto const& du = _face.fe<PLUS>().dphi[id_u][qp]; // Gradient
   // Test function
-  auto const& v  = _face.fe<PLUS>().phi[id_test] [_face.qp()];
-  auto const& dv = _face.fe<PLUS>().dphi[id_test][_face.qp()]; // Gradient
+  auto const& v  = _face.fe<PLUS>().phi[id_test] [qp];
+  auto const& dv = _face.fe<PLUS>().dphi[id_test][qp]; // Gradient
 
   return -0.5 * (v*(du*normal) + u*(dv*normal)) + (_penalty/_h_elem)*u*v;
 }
 
 Number inline
-SIP_BilinearForm::value_plus_minus(unsigned int id_u, unsigned int id_test) const
+SIP_BilinearForm::value_plus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
-  auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
+  auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
   // Unknown
-  auto const& u  = _face.fe<PLUS>().phi[id_u] [_face.qp()];
-  auto const& du = _face.fe<PLUS>().dphi[id_u][_face.qp()]; // Gradient
+  auto const& u  = _face.fe<PLUS>().phi[id_u] [qp];
+  auto const& du = _face.fe<PLUS>().dphi[id_u][qp]; // Gradient
   // Test function
-  auto const& v  = _face.fe<MINUS>().phi[id_test] [_face.qp()];
-  auto const& dv = _face.fe<MINUS>().dphi[id_test][_face.qp()]; // Gradient
+  auto const& v  = _face.fe<MINUS>().phi[id_test] [qp];
+  auto const& dv = _face.fe<MINUS>().dphi[id_test][qp]; // Gradient
 
   return 0.5 * (v*(du*normal) - u*(dv*normal)) - (_penalty/_h_elem)*u*v;
 }
 
 Number inline
-SIP_BilinearForm::value_minus_plus(unsigned int id_u, unsigned int id_test) const
+SIP_BilinearForm::value_minus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
-  auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
+  auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
   // Unknown
-  auto const& u  = _face.fe<MINUS>().phi[id_u] [_face.qp()];
-  auto const& du = _face.fe<MINUS>().dphi[id_u][_face.qp()]; // Gradient
+  auto const& u  = _face.fe<MINUS>().phi[id_u] [qp];
+  auto const& du = _face.fe<MINUS>().dphi[id_u][qp]; // Gradient
   // Test function
-  auto const& v  = _face.fe<PLUS>().phi[id_test] [_face.qp()];
-  auto const& dv = _face.fe<PLUS>().dphi[id_test][_face.qp()]; // Gradient
+  auto const& v  = _face.fe<PLUS>().phi[id_test] [qp];
+  auto const& dv = _face.fe<PLUS>().dphi[id_test][qp]; // Gradient
 
   return 0.5 * (-v*(du*normal) + u*(dv*normal)) - (_penalty/_h_elem)*u*v;
 }
 
 Number inline
-SIP_BilinearForm::value_minus_minus(unsigned int id_u, unsigned int id_test) const
+SIP_BilinearForm::value_minus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
-  auto const& normal = _face.fe<PLUS>().qrule_normals[_face.qp()];
+  auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
   // Unknown
-  auto const& u  = _face.fe<MINUS>().phi[id_u] [_face.qp()];
-  auto const& du = _face.fe<MINUS>().dphi[id_u][_face.qp()]; // Gradient
+  auto const& u  = _face.fe<MINUS>().phi[id_u] [qp];
+  auto const& du = _face.fe<MINUS>().dphi[id_u][qp]; // Gradient
   // Test function
-  auto const& v  = _face.fe<MINUS>().phi[id_test] [_face.qp()];
-  auto const& dv = _face.fe<MINUS>().dphi[id_test][_face.qp()]; // Gradient
+  auto const& v  = _face.fe<MINUS>().phi[id_test] [qp];
+  auto const& dv = _face.fe<MINUS>().dphi[id_test][qp]; // Gradient
 
   return 0.5 * (v*(du*normal) + u*(dv*normal)) + (_penalty/_h_elem)*u*v;
 }
@@ -325,6 +325,13 @@ public:
     _K_minus_plus.resize  ( _face.fe<MINUS>().n_dofs(), _face.fe<PLUS>().n_dofs() );
     _K_minus_minus.resize ( _face.fe<MINUS>().n_dofs(), _face.fe<MINUS>().n_dofs() );
   }
+  FaceIntegrator(DG_FaceCoupling const& f, Term const& t): _face(f), _term(t)
+  {
+    _K_plus_plus.resize   ( _face.fe<PLUS>().n_dofs(), _face.fe<PLUS>().n_dofs() );
+    _K_plus_minus.resize  ( _face.fe<PLUS>().n_dofs(), _face.fe<MINUS>().n_dofs() );
+    _K_minus_plus.resize  ( _face.fe<MINUS>().n_dofs(), _face.fe<PLUS>().n_dofs() );
+    _K_minus_minus.resize ( _face.fe<MINUS>().n_dofs(), _face.fe<MINUS>().n_dofs() );
+  }
 
   DenseMatrix<Number>& get_K_plus_plus()   { return _K_plus_plus; }
   DenseMatrix<Number>& get_K_plus_minus()  { return _K_plus_minus; }
@@ -353,13 +360,13 @@ template <CoupledElement Elem1, CoupledElement Elem2> void
 FaceIntegrator<Term>::add_values_to_matrix(Number const& weight)
 {
   const unsigned int n_dofs_1 = _face.fe<Elem1>().n_dofs();
+  const unsigned int n_dofs_2 = _face.fe<Elem2>().n_dofs();
   for (unsigned int i=0; i<n_dofs_1; i++)
     {
-      const unsigned int n_dofs_2 = _face.fe<Elem2>().n_dofs();
       for (unsigned int j=0; j<n_dofs_2; j++)
 	{
 	  // Number value = _term.value<Elem1,Elem2>(i,j);
-	  Number value = face_select<Elem1,Elem2>::evaluate(_term,i,j);
+	  Number value = face_select<Elem1,Elem2>::evaluate(_term,_qp,i,j);
 	  DenseMatrix<Number>& K = face_select<Elem1,Elem2>::matrix(this);
 	  K(i,j) += weight*value;
 	}
@@ -369,10 +376,14 @@ FaceIntegrator<Term>::add_values_to_matrix(Number const& weight)
 template <class BilinearForm> void
 FaceIntegrator<BilinearForm>::integrate()
 {
+  std::cout << "### 3000" << " n_qp=" << _face.n_quad_points() << std::endl;
   for (_qp=0; _qp<_face.n_quad_points(); _qp++) // Integrate on face
     {
+      std::cout << "### 3001" << " qp=" << _qp << std::endl;
       const auto weight = _face.fe<PLUS>().JxW[_qp];
+      std::cout << "### 3002" << std::endl;
       add_values_to_matrix<PLUS, PLUS> (weight);
+      std::cout << "### 3003" << std::endl;
       add_values_to_matrix<PLUS, MINUS>(weight);
       add_values_to_matrix<MINUS,PLUS> (weight);
       add_values_to_matrix<MINUS,MINUS>(weight);
@@ -383,7 +394,7 @@ template <class BilinearForm> void
 FaceIntegrator<BilinearForm>::save_to_system(LinearImplicitSystem& system)
 {
   const auto& dofs_plus  = _face.fe<PLUS>().dof_indices;
-  const auto& dofs_minus = _face.fe<PLUS>().dof_indices;
+  const auto& dofs_minus = _face.fe<MINUS>().dof_indices;
   system.matrix->add_matrix(_K_plus_plus, dofs_plus);
   system.matrix->add_matrix(_K_plus_minus, dofs_plus, dofs_minus);
   system.matrix->add_matrix(_K_minus_plus, dofs_minus, dofs_plus);
@@ -400,9 +411,9 @@ struct face_select<PLUS,PLUS> {
     return fi->get_K_plus_plus();
   }
   template <class Term>
-  static Number evaluate(const Term& term, unsigned int i, unsigned int j)
+  static Number evaluate(const Term& term, unsigned int qp, unsigned int i, unsigned int j)
   {
-    return term.value_plus_plus(i,j);
+    return term.value_plus_plus(qp,i,j);
   }
 
 };
@@ -415,9 +426,9 @@ struct face_select<PLUS,MINUS> {
     return fi->get_K_plus_minus();
   }
   template <class Term>
-  static Number evaluate(const Term& term, unsigned int i, unsigned int j)
+  static Number evaluate(const Term& term, unsigned int qp, unsigned int i, unsigned int j)
   {
-    return term.value_plus_minus(i,j);
+    return term.value_plus_minus(qp, i,j);
   }
 };
 
@@ -429,9 +440,9 @@ struct face_select<MINUS,PLUS> {
     return fi->get_K_minus_plus();
   }
   template <class Term>
-  static Number evaluate(const Term& term, unsigned int i, unsigned int j)
+  static Number evaluate(const Term& term, unsigned int qp, unsigned int i, unsigned int j)
   {
-    return term.value_minus_plus(i,j);
+    return term.value_minus_plus(qp,i,j);
   }
 };
 
@@ -443,9 +454,9 @@ struct face_select<MINUS,MINUS> {
     return fi->get_K_minus_minus();
   }
   template <class Term>
-  static Number evaluate(const Term& term, unsigned int i, unsigned int j)
+  static Number evaluate(const Term& term, unsigned int qp, unsigned int i, unsigned int j)
   {
-    return term.value_minus_minus(i,j);
+    return term.value_minus_minus(qp,i,j);
   }
 };
 

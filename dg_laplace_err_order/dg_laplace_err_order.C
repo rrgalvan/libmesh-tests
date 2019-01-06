@@ -206,6 +206,9 @@ void assemble_ellipticdg(EquationSystems & es,
 	  }
 
       // Now we address boundary conditions.
+      // First we assign to fe_elem_face the dofs of fe
+      fe_elem_face.init_dofs(fe.dof_indices);
+
       // We consider Dirichlet bc imposed via the interior penalty method <<
       // The following loops over the sides of the element.
       // If the element has no neighbor on a side then that
@@ -322,15 +325,17 @@ void assemble_ellipticdg(EquationSystems & es,
                   // matrix this neighbor will contribute to.
   		  fe_neighbor_face.init_dofs(neighbor, dof_map);
 
-		  DG_FaceCoupling face_coupling(fe_elem_face, fe_neighbor_face);
-		  SIP_BilinearForm a_sip(face_coupling, penalty, h_elem);
-		  FaceIntegrator<SIP_BilinearForm> a_sip_integrator(a_sip);
-		  a_sip_integrator.integrate();
+		  std::cout << fe_elem_face.n_dofs() << std::endl;
+		  std::cout << fe_neighbor_face.n_dofs() << std::endl;
+		  DG_FaceCoupling face(fe_elem_face, fe_neighbor_face);
+		  SIP_BilinearForm asip(face, penalty, h_elem);
+		  FaceIntegrator<SIP_BilinearForm> asip_integrator(face, asip);
+		  asip_integrator.integrate();
 
                   // The element and neighbor boundary matrix are now built
                   // for this side.  Add them to the global matrix
                   // The SparseMatrix::add_matrix() members do this for us.
-		  a_sip_integrator.save_to_system(ellipticdg_system);
+		  asip_integrator.save_to_system(ellipticdg_system);
                 }
             }
         }

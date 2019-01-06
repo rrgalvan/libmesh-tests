@@ -1,0 +1,13 @@
+Beginning Solve 0
+Beginning Solve 1
+  L2-Error-Order is: 1.86779
+  H1-Error-Order is: 0.991187
+Beginning Solve 2
+  L2-Error-Order is: 2.00893
+  H1-Error-Order is: 1.02075
+Beginning Solve 3
+  L2-Error-Order is: 1.98424
+  H1-Error-Order is: 1.01543
+Beginning Solve 4
+  L2-Error-Order is: 1.97628
+  H1-Error-Order is: 1.00932
