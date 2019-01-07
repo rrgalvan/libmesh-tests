@@ -325,11 +325,12 @@ void assemble_ellipticdg(EquationSystems & es,
                   // matrix this neighbor will contribute to.
   		  fe_neighbor_face.init_dofs(neighbor, dof_map);
 
-		  std::cout << fe_elem_face.n_dofs() << std::endl;
-		  std::cout << fe_neighbor_face.n_dofs() << std::endl;
+		  // Define a face object associated to two elements
 		  DG_FaceCoupling face(fe_elem_face, fe_neighbor_face);
+		  // Define SIP bilinear form on that face
 		  SIP_BilinearForm asip(face, penalty, h_elem);
-		  FaceIntegrator<SIP_BilinearForm> asip_integrator(face, asip);
+		  // Integrate to local matrices
+		  FaceIntegrator<SIP_BilinearForm> asip_integrator(asip);
 		  asip_integrator.integrate();
 
                   // The element and neighbor boundary matrix are now built
@@ -339,6 +340,7 @@ void assemble_ellipticdg(EquationSystems & es,
                 }
             }
         }
+
       // The element interior matrix and right-hand-side are now built
       // for this element.  Add them to the global matrix and
       // right-hand-side vector.  The SparseMatrix::add_matrix()

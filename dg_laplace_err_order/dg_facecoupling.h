@@ -59,7 +59,9 @@ protected:
   const DG_FaceCoupling& _face;
 };
 
+//----------------------------------------------------------------------
 class SIP_BilinearForm: public DG_Term
+//----------------------------------------------------------------------
 {
 public:
   SIP_BilinearForm(const DG_FaceCoupling& face_coupling,
@@ -70,19 +72,25 @@ public:
 
   // Evalate bilinear form (at current qudrature point) for the
   // unknown basis function id_u and the test basis function id_test
-  Number inline value_plus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
-  Number inline value_plus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
-  Number inline value_minus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
-  Number inline value_minus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
+  Number inline value_plus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const {
+    return _value<PLUS,PLUS>(qp,id_u,id_test); }
+  Number inline value_plus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const {
+    return _value<PLUS,MINUS>(qp,id_u,id_test); }
+  Number inline value_minus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const {
+    return _value<MINUS,PLUS>(qp,id_u,id_test); }
+  Number inline value_minus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const {
+    return _value<MINUS,MINUS>(qp,id_u,id_test); }
 
-  template <CoupledElement Elem1, CoupledElement Elem2>
-  Number value(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
 private:
   const double _penalty;
   const double _h_elem;
+
+  template <CoupledElement Elem1, CoupledElement Elem2>
+  Number _value(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
 };
-template <CoupledElement Elem1, CoupledElement Elem2>
-Number SIP_BilinearForm::value(unsigned int qp, unsigned int id_u, unsigned int id_test) const
+
+template <CoupledElement Elem1, CoupledElement Elem2> inline
+Number SIP_BilinearForm::_value(unsigned int qp, unsigned int id_u, unsigned int id_test) const
 {
   // Normal vector, considered in PLUS orientation
   auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
@@ -97,91 +105,6 @@ Number SIP_BilinearForm::value(unsigned int qp, unsigned int id_u, unsigned int 
     + (_penalty/_h_elem) * jump<Elem1>(u)*jump<Elem2>(v);
 }
 
-// template <> Number inline
-// SIP_BilinearForm::value<PLUS,PLUS>(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-// {
-//   // Normal vector, considered in PLUS orientation
-//   auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
-//   // Unknown
-//   auto const& u  = _face.fe<PLUS>().phi[id_u] [qp];
-//   auto const& du = _face.fe<PLUS>().dphi[id_u][qp]; // Gradient
-//   // Test function
-//   auto const& v  = _face.fe<PLUS>().phi[id_test] [qp];
-//   auto const& dv = _face.fe<PLUS>().dphi[id_test][qp]; // Gradient
-
-//   return -0.5 * (v*(du*normal) + u*(dv*normal)) + (_penalty/_h_elem)*u*v;
-// }
-
-// template <> Number inline
-// SIP_BilinearForm::value<PLUS,MINUS>(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-// {
-//   // Normal vector, considered in PLUS orientation
-//   auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
-//   // Unknown
-//   auto const& u  = _face.fe<PLUS>().phi[id_u] [qp];
-//   auto const& du = _face.fe<PLUS>().dphi[id_u][qp]; // Gradient
-//   // Test function
-//   auto const& v  = _face.fe<MINUS>().phi[id_test] [qp];
-//   auto const& dv = _face.fe<MINUS>().dphi[id_test][qp]; // Gradient
-
-//   return 0.5 * (v*(du*normal) - u*(dv*normal)) - (_penalty/_h_elem)*u*v;
-// }
-
-// template <> Number inline
-// SIP_BilinearForm::value<MINUS,PLUS>(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-// {
-//   // Normal vector, considered in PLUS orientation
-//   auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
-//   // Unknown
-//   auto const& u  = _face.fe<MINUS>().phi[id_u] [qp];
-//   auto const& du = _face.fe<MINUS>().dphi[id_u][qp]; // Gradient
-//   // Test function
-//   auto const& v  = _face.fe<PLUS>().phi[id_test] [qp];
-//   auto const& dv = _face.fe<PLUS>().dphi[id_test][qp]; // Gradient
-
-//   return 0.5 * (-v*(du*normal) + u*(dv*normal)) - (_penalty/_h_elem)*u*v;
-// }
-
-// template <> Number inline
-// SIP_BilinearForm::value<MINUS,MINUS>(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-// {
-//   // Normal vector, considered in PLUS orientation
-//   auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
-//   // Unknown
-//   auto const& u  = _face.fe<MINUS>().phi[id_u] [qp];
-//   auto const& du = _face.fe<MINUS>().dphi[id_u][qp]; // Gradient
-//   // Test function
-//   auto const& v  = _face.fe<MINUS>().phi[id_test] [qp];
-//   auto const& dv = _face.fe<MINUS>().dphi[id_test][qp]; // Gradient
-
-//   return 0.5 * (v*(du*normal) + u*(dv*normal)) + (_penalty/_h_elem)*u*v;
-// }
-
-//----------------------------------------------------------------------
-
-Number inline
-SIP_BilinearForm::value_plus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-{
-  return value<PLUS,PLUS>(qp,id_u,id_test);
-}
-
-Number inline
-SIP_BilinearForm::value_plus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-{
-  return value<PLUS,MINUS>(qp,id_u,id_test);
-}
-
-Number inline
-SIP_BilinearForm::value_minus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-{
-  return value<MINUS,PLUS>(qp,id_u,id_test);
-}
-
-Number inline
-SIP_BilinearForm::value_minus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-{
-  return value<MINUS,MINUS>(qp,id_u,id_test);
-}
 
 //----------------------------------------------------------------------
 template <CoupledElement Elem1, CoupledElement Elem2>
@@ -195,13 +118,6 @@ class FaceIntegrator
 {
 public:
   FaceIntegrator(Term const& t): _face(t.face()), _term(t)
-  {
-    _K_plus_plus.resize   ( _face.fe<PLUS>().n_dofs(), _face.fe<PLUS>().n_dofs() );
-    _K_plus_minus.resize  ( _face.fe<PLUS>().n_dofs(), _face.fe<MINUS>().n_dofs() );
-    _K_minus_plus.resize  ( _face.fe<MINUS>().n_dofs(), _face.fe<PLUS>().n_dofs() );
-    _K_minus_minus.resize ( _face.fe<MINUS>().n_dofs(), _face.fe<MINUS>().n_dofs() );
-  }
-  FaceIntegrator(DG_FaceCoupling const& f, Term const& t): _face(f), _term(t)
   {
     _K_plus_plus.resize   ( _face.fe<PLUS>().n_dofs(), _face.fe<PLUS>().n_dofs() );
     _K_plus_minus.resize  ( _face.fe<PLUS>().n_dofs(), _face.fe<MINUS>().n_dofs() );
@@ -227,13 +143,13 @@ private:
   unsigned int _qp;
 
   template <CoupledElement Elem1, CoupledElement Elem2> void
-    add_values_to_matrix(Number const& weight);
+    _integrate_to_matrix(Number const& weight);
 
 };
 
 template <class Term>
 template <CoupledElement Elem1, CoupledElement Elem2> void
-FaceIntegrator<Term>::add_values_to_matrix(Number const& weight)
+FaceIntegrator<Term>::_integrate_to_matrix(Number const& weight)
 {
   const unsigned int n_dofs_1 = _face.fe<Elem1>().n_dofs();
   const unsigned int n_dofs_2 = _face.fe<Elem2>().n_dofs();
@@ -242,7 +158,7 @@ FaceIntegrator<Term>::add_values_to_matrix(Number const& weight)
       for (unsigned int j=0; j<n_dofs_2; j++)
 	{
 	  // Number value = _term.value<Elem1,Elem2>(i,j);
-	  Number value = face_select<Elem1,Elem2>::evaluate(_term,_qp,i,j);
+	  Number value = face_select<Elem1,Elem2>::evaluate(_term, _qp, i, j);
 	  DenseMatrix<Number>& K = face_select<Elem1,Elem2>::matrix(this);
 	  K(i,j) += weight*value;
 	}
@@ -252,17 +168,13 @@ FaceIntegrator<Term>::add_values_to_matrix(Number const& weight)
 template <class BilinearForm> void
 FaceIntegrator<BilinearForm>::integrate()
 {
-  std::cout << "### 3000" << " n_qp=" << _face.n_quad_points() << std::endl;
   for (_qp=0; _qp<_face.n_quad_points(); _qp++) // Integrate on face
     {
-      std::cout << "### 3001" << " qp=" << _qp << std::endl;
       const auto weight = _face.fe<PLUS>().JxW[_qp];
-      std::cout << "### 3002" << std::endl;
-      add_values_to_matrix<PLUS, PLUS> (weight);
-      std::cout << "### 3003" << std::endl;
-      add_values_to_matrix<PLUS, MINUS>(weight);
-      add_values_to_matrix<MINUS,PLUS> (weight);
-      add_values_to_matrix<MINUS,MINUS>(weight);
+      _integrate_to_matrix<PLUS, PLUS> (weight);
+      _integrate_to_matrix<PLUS, MINUS>(weight);
+      _integrate_to_matrix<MINUS,PLUS> (weight);
+      _integrate_to_matrix<MINUS,MINUS>(weight);
     }
 }
 
