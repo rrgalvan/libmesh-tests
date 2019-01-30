@@ -157,7 +157,6 @@ FaceIntegrator<Term>::_integrate_to_matrix(Number const& weight)
     {
       for (unsigned int j=0; j<n_dofs_2; j++)
 	{
-	  // Number value = _term.value<Elem1,Elem2>(i,j);
 	  Number value = face_select<Elem1,Elem2>::evaluate(_term, _qp, i, j);
 	  DenseMatrix<Number>& K = face_select<Elem1,Elem2>::matrix(this);
 	  K(i,j) += weight*value;

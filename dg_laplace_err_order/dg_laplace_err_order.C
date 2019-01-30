@@ -353,7 +353,6 @@ void assemble_ellipticdg(EquationSystems & es,
 }
 
 
-
 int main (int argc, char** argv)
 {
   LibMeshInit init(argc, argv);
