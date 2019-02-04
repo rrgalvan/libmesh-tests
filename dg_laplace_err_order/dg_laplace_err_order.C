@@ -281,44 +281,21 @@ void assemble_ellipticdg(EquationSystems & es,
                    (elem_id < neighbor_id)) ||
                   (neighbor->level() < elem->level()))
                 {
-                  // Pointer to the element side
-                  std::unique_ptr<const Elem> elem_side (elem->build_side_ptr(side));
 
-                  // h dimension to compute the interior penalty penalty parameter
-                  const unsigned int elem_b_order = static_cast<unsigned int>(fe_elem_face.fe->get_order());
-                  const unsigned int neighbor_b_order = static_cast<unsigned int>(fe_neighbor_face.fe->get_order());
-                  const double side_order = (elem_b_order + neighbor_b_order)/2.;
-                  const double h_elem = (elem->volume()/elem_side->volume()) * 1./pow(side_order,2.);
+		  // Pointer to the element side
+		  std::unique_ptr<const Elem> elem_side (elem->build_side_ptr(side));
 
-                  // The quadrature point locations on the neighbor side
-                  std::vector<Point> qface_neighbor_point;
+		  const double h_elem = compute_h_elem(elem, elem_side,
+						       fe_elem_face, fe_neighbor_face);
 
-                  // The quadrature point locations on the element side
-                  std::vector<Point > qface_point;
-
-                  // Reinitialize shape functions on the element side
-                  fe_elem_face.fe->reinit(elem, side);
-
-                  // Get the physical locations of the element quadrature points
-                  qface_point = fe_elem_face.fe->get_xyz();
-
-                  // Find their locations on the neighbor (save in qface_neighbor_point)
-                  unsigned int side_neighbor = neighbor->which_neighbor_am_i(elem);
-                  if (refinement_type == "p")
-                    fe_neighbor_face.fe->side_map (neighbor,
-                                                elem_side.get(),
-                                                side_neighbor,
-                                                fe_elem_face.qrule->get_points(),
-                                                qface_neighbor_point);
-                  else
-                    FEInterface::inverse_map (elem->dim(),
-                                              fe.fe->get_fe_type(),
-                                              neighbor,
-                                              qface_point,
-                                              qface_neighbor_point);
+                  // Compute quadrature point locations on the neighbor side
+                  std::vector<Point> qface_neighbor_points =
+		    compute_qface_neighbor_points(elem, elem_side, side, neighbor,
+						 fe, fe_elem_face, fe_neighbor_face,
+						 refinement_type);
 
                   // Calculate the neighbor element shape functions at those locations
-                  fe_neighbor_face.fe->reinit(neighbor, &qface_neighbor_point);
+                  fe_neighbor_face.fe->reinit(neighbor, &qface_neighbor_points);
 
                   // Get the degree of freedom indices for the
                   // neighbor.  These define where in the global

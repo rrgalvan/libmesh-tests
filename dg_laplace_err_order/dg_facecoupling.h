@@ -246,6 +246,64 @@ struct face_select<MINUS,MINUS> {
   }
 };
 
+//
+// Utilities
+//
+
+double inline compute_h_elem(const Elem* elem,
+		      const std::unique_ptr<const Elem>& elem_side,
+		      const FE_Wrapper& fe_elem_face,
+		      const FE_Wrapper& fe_neighbor_face)
+{
+
+  // h dimension to compute the interior penalty penalty parameter
+  const unsigned int elem_b_order = static_cast<unsigned int>(fe_elem_face.fe->get_order());
+  const unsigned int neighbor_b_order = static_cast<unsigned int>(fe_neighbor_face.fe->get_order());
+  const double side_order = (elem_b_order + neighbor_b_order)/2.;
+  const double h_elem = (elem->volume()/elem_side->volume()) * 1./pow(side_order,2.);
+  return h_elem;
+}
+
+
+// Compute quadrature point locations on the neighbor side
+std::vector<Point> inline
+compute_qface_neighbor_points(const Elem* elem,
+			      const std::unique_ptr<const Elem>& elem_side,
+			      int side,
+			      const Elem* neighbor,
+			      const FE_Wrapper& fe,
+			      const FE_Wrapper& fe_elem_face,
+			      const FE_Wrapper& fe_neighbor_face,
+			      const std::string& refinement_type)
+{
+  std::vector<Point> qface_neighbor_point;
+
+  // The quadrature point locations on the element side
+  std::vector<Point > qface_point;
+
+  // Reinitialize shape functions on the element side
+  fe_elem_face.fe->reinit(elem, side);
+
+  // Get the physical locations of the element quadrature points
+  qface_point = fe_elem_face.fe->get_xyz();
+
+  // Find their locations on the neighbor (save in qface_neighbor_point)
+  unsigned int side_neighbor = neighbor->which_neighbor_am_i(elem);
+  if (refinement_type == "p")
+    fe_neighbor_face.fe->side_map (neighbor,
+				   elem_side.get(),
+				   side_neighbor,
+				   fe_elem_face.qrule->get_points(),
+				   qface_neighbor_point);
+  else
+    FEInterface::inverse_map (elem->dim(),
+			      fe.fe->get_fe_type(),
+			      neighbor,
+			      qface_point,
+			      qface_neighbor_point);
+
+}
+
 #endif // DG_FACECOUPLING
 
 
