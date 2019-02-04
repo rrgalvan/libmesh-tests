@@ -302,6 +302,7 @@ compute_qface_neighbor_points(const Elem* elem,
 			      qface_point,
 			      qface_neighbor_point);
 
+  return qface_neighbor_point;
 }
 
 #endif // DG_FACECOUPLING

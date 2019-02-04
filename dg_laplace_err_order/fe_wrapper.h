@@ -4,6 +4,13 @@
 #include "libmesh/libmesh.h"
 using namespace libMesh;
 
+//
+// Class wrapping libmesh objects: finite element, quadrature rule, etc.
+//
+// The method init_dofs computes this->dof_indices the degrees of
+// freedom indices or the current element, defining location of
+// matrix and rhs contributions.
+//
 struct FE_Wrapper {
   // Inernal Finite Element object. Since the FEBase::build() member
   // dynamically creates memory we will store the object as a
