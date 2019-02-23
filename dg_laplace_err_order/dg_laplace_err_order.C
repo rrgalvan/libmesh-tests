@@ -217,6 +217,14 @@ void assemble_ellipticdg(EquationSystems & es,
               const double h_elem
   		= elem->volume()/elem_side->volume() * 1./pow(elem_b_order, 2.);
 
+	      // // Define a DG face object associated to two elements
+	      // DG_FaceCoupling face(fe_elem_face, fe_neighbor_face);
+	      // // Define SIP bilinear form on that face
+	      // SIP_BilinearForm asip(face, penalty, h_elem);
+	      // // Integrate to local matrices
+	      // InteriorFaceIntegrator<SIP_BilinearForm> asip_integrator(asip);
+	      // asip_integrator.integrate();
+
   	      // Integrate in element face
   	      auto const n_dofs = fe.n_dofs();
   	      auto const n_face_points = fe_elem_face.n_quad_points();
