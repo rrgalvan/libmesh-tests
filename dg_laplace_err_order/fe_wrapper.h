@@ -7,7 +7,7 @@ using namespace libMesh;
 //
 // Class wrapping libmesh objects: finite element, quadrature rule, etc.
 //
-// The method init_dofs computes this->dof_indices the degrees of
+// The method set_global_dof_indices computes this->dof_indices the degrees of
 // freedom indices or the current element, defining location of
 // matrix and rhs contributions.
 //
@@ -52,7 +52,7 @@ FE_Wrapper(std::unique_ptr<FEBase>&& fe_, QGauss* qrule_):
   }
 
   // Reinit element degrees of freedom from a DofMap
-  void init_dofs(const Elem* element, const DofMap & dof_map)
+  void set_global_dof_indices(const Elem* element, const DofMap & dof_map)
   {
       // Compute (in this->dof_indices) the degrees of freedom indices
       // for the current element.  These define where in the global
@@ -62,7 +62,7 @@ FE_Wrapper(std::unique_ptr<FEBase>&& fe_, QGauss* qrule_):
   }
 
   // Reinit element degrees of freedom from a given vector of dof indices
-  void init_dofs(const std::vector<dof_id_type>& dof_indices)
+  void set_global_dof_indices(const std::vector<dof_id_type>& dof_indices)
   {
       this->dof_indices = dof_indices;
       _n_dofs = dof_indices.size();

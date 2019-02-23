@@ -163,22 +163,13 @@ void assemble_ellipticdg(EquationSystems & es,
   DenseMatrix<Number> Ke;
   DenseVector<Number> Fe;
 
-  // Data structures to contain the element and neighbor boundary matrix
-  // contribution. This matrices will do the coupling between the dofs of
-  // the element and those of his neighbors.
-  // Ken: matrix coupling elem and neighbor dofs
-  DenseMatrix<Number> Kne;
-  DenseMatrix<Number> Ken;
-  DenseMatrix<Number> Kee;
-  DenseMatrix<Number> Knn;
-
   // Now we will loop over all the elements in the mesh.  We will
   // compute first the element interior matrix and right-hand-side contribution
   // and then the element and neighbors boundary matrix contributions.
   for (const auto & elem : mesh.active_local_element_ptr_range())
     {
-      // Init local dofs
-      fe.init_dofs(elem, dof_map);
+      // Init local dofs for current element
+      fe.set_global_dof_indices(elem, dof_map);
       fe.fe->reinit(elem);
       // Zero the element matrix and right-hand side before
       // summing them.  We use the resize member here because
@@ -207,7 +198,7 @@ void assemble_ellipticdg(EquationSystems & es,
 
       // Now we address boundary conditions.
       // First we assign to fe_elem_face the dofs of fe
-      fe_elem_face.init_dofs(fe.dof_indices);
+      fe_elem_face.set_global_dof_indices(fe.dof_indices);
 
       // We consider Dirichlet bc imposed via the interior penalty method <<
       // The following loops over the sides of the element.
@@ -294,20 +285,21 @@ void assemble_ellipticdg(EquationSystems & es,
 						 fe, fe_elem_face, fe_neighbor_face,
 						 refinement_type);
 
-                  // Calculate the neighbor element shape functions at those locations
+                  // Evaluate the neighbor element shape functions at those locations
                   fe_neighbor_face.fe->reinit(neighbor, &qface_neighbor_points);
 
-                  // Get the degree of freedom indices for the
-                  // neighbor.  These define where in the global
-                  // matrix this neighbor will contribute to.
-  		  fe_neighbor_face.init_dofs(neighbor, dof_map);
+                  // Set the degree of freedom indices for the
+                  // neighbor element. These define where in the
+                  // global matrix this neighbor element will
+                  // contribute to.
+  		  fe_neighbor_face.set_global_dof_indices(neighbor, dof_map);
 
-		  // Define a face object associated to two elements
+		  // Define a DG face object associated to two elements
 		  DG_FaceCoupling face(fe_elem_face, fe_neighbor_face);
 		  // Define SIP bilinear form on that face
 		  SIP_BilinearForm asip(face, penalty, h_elem);
 		  // Integrate to local matrices
-		  FaceIntegrator<SIP_BilinearForm> asip_integrator(asip);
+		  InteriorFaceIntegrator<SIP_BilinearForm> asip_integrator(asip);
 		  asip_integrator.integrate();
 
                   // The element and neighbor boundary matrix are now built

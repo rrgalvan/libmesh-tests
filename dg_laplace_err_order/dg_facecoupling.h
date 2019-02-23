@@ -85,7 +85,7 @@ private:
   const double _penalty;
   const double _h_elem;
 
-  template <CoupledElement Elem1, CoupledElement Elem2>
+    template <CoupledElement Elem1, CoupledElement Elem2>
   Number _value(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
 };
 
@@ -113,11 +113,11 @@ class face_select {};
 
 //----------------------------------------------------------------------
 template <class Term>
-class FaceIntegrator
+class InteriorFaceIntegrator
 //----------------------------------------------------------------------
 {
 public:
-  FaceIntegrator(Term const& t): _face(t.face()), _term(t)
+  InteriorFaceIntegrator(Term const& t): _face(t.face()), _term(t)
   {
     _K_plus_plus.resize   ( _face.fe<PLUS>().n_dofs(), _face.fe<PLUS>().n_dofs() );
     _K_plus_minus.resize  ( _face.fe<PLUS>().n_dofs(), _face.fe<MINUS>().n_dofs() );
@@ -143,13 +143,13 @@ private:
   unsigned int _qp;
 
   template <CoupledElement Elem1, CoupledElement Elem2> void
-    _integrate_to_matrix(Number const& weight);
+    _integrate_on_qpoint(Number const& weight);
 
 };
 
 template <class Term>
 template <CoupledElement Elem1, CoupledElement Elem2> void
-FaceIntegrator<Term>::_integrate_to_matrix(Number const& weight)
+InteriorFaceIntegrator<Term>::_integrate_on_qpoint(Number const& weight)
 {
   const unsigned int n_dofs_1 = _face.fe<Elem1>().n_dofs();
   const unsigned int n_dofs_2 = _face.fe<Elem2>().n_dofs();
@@ -165,20 +165,89 @@ FaceIntegrator<Term>::_integrate_to_matrix(Number const& weight)
 }
 
 template <class BilinearForm> void
-FaceIntegrator<BilinearForm>::integrate()
+InteriorFaceIntegrator<BilinearForm>::integrate()
 {
   for (_qp=0; _qp<_face.n_quad_points(); _qp++) // Integrate on face
     {
       const auto weight = _face.fe<PLUS>().JxW[_qp];
-      _integrate_to_matrix<PLUS, PLUS> (weight);
-      _integrate_to_matrix<PLUS, MINUS>(weight);
-      _integrate_to_matrix<MINUS,PLUS> (weight);
-      _integrate_to_matrix<MINUS,MINUS>(weight);
+      _integrate_on_qpoint<PLUS, PLUS> (weight);
+      _integrate_on_qpoint<PLUS, MINUS>(weight);
+      _integrate_on_qpoint<MINUS,PLUS> (weight);
+      _integrate_on_qpoint<MINUS,MINUS>(weight);
     }
 }
 
 template <class BilinearForm> void
-FaceIntegrator<BilinearForm>::save_to_system(LinearImplicitSystem& system)
+InteriorFaceIntegrator<BilinearForm>::save_to_system(LinearImplicitSystem& system)
+{
+  const auto& dofs_plus  = _face.fe<PLUS>().dof_indices;
+  const auto& dofs_minus = _face.fe<MINUS>().dof_indices;
+  system.matrix->add_matrix(_K_plus_plus, dofs_plus);
+  system.matrix->add_matrix(_K_plus_minus, dofs_plus, dofs_minus);
+  system.matrix->add_matrix(_K_minus_plus, dofs_minus, dofs_plus);
+  system.matrix->add_matrix(_K_minus_minus, dofs_minus);
+}
+
+//----------------------------------------------------------------------
+template <class Term>
+class BoundaryFaceIntegrator
+//----------------------------------------------------------------------
+{
+public:
+  BoundaryFaceIntegrator(Term const& t): _face(t.face()), _term(t)
+  {
+    _Ke.resize   ( _face.fe<PLUS>().n_dofs(), _face.fe<PLUS>().n_dofs() );
+    _Fe.resize   ( _face.fe<PLUS>().n_dofs() )
+  }
+
+  DenseMatrix<Number>& get_K_plus_plus()   { return _Ke; }
+
+  void integrate();
+  void save_to_system(LinearImplicitSystem& system);
+
+private:
+  DenseMatrix<Number> _Ke;
+  DenseVector<Number> _Fe;
+  DG_FaceCoupling const& _face;
+  Term const& _term;
+  unsigned int _qp;
+
+  template <CoupledElement Elem1, CoupledElement Elem2> void
+    _integrate_on_qpoint(Number const& weight);
+
+};
+
+template <class Term>
+template <CoupledElement Elem1, CoupledElement Elem2> void
+BoundaryFaceIntegrator<Term>::_integrate_on_qpoint(Number const& weight)
+{
+  const unsigned int n_dofs_1 = _face.fe<Elem1>().n_dofs();
+  const unsigned int n_dofs_2 = _face.fe<Elem2>().n_dofs();
+  for (unsigned int i=0; i<n_dofs_1; i++)
+    {
+      for (unsigned int j=0; j<n_dofs_2; j++)
+	{
+	  Number value = _term.value(_qp, i, j);
+	  _Ke(i,j) += weight*value;
+	}
+    }
+}
+
+template <class BilinearForm> void
+BoundaryFaceIntegrator<BilinearForm>::integrate()
+{
+  for (_qp=0; _qp<_face.n_quad_points(); _qp++) // Integrate on face
+    {
+      const auto weight = _face.fe<PLUS>().JxW[_qp];
+      _integrate_on_qpoint<PLUS, PLUS> (weight);
+      _integrate_on_qpoint<PLUS, MINUS>(weight);
+      _integrate_on_qpoint<MINUS,PLUS> (weight);
+      _integrate_on_qpoint<MINUS,MINUS>(weight);
+    }
+}
+
+template <class BilinearForm> void
+BoundaryFaceIntegrator<BilinearForm>::save_to_system(LinearImplicitSystem& system)
 {
   const auto& dofs_plus  = _face.fe<PLUS>().dof_indices;
   const auto& dofs_minus = _face.fe<MINUS>().dof_indices;
@@ -189,10 +258,12 @@ FaceIntegrator<BilinearForm>::save_to_system(LinearImplicitSystem& system)
 }
 
 
+//----------------------------------------------------------------------
 template <>
 struct face_select<PLUS,PLUS> {
+//----------------------------------------------------------------------
   template <class Term>
-  static DenseMatrix<Number>& matrix(FaceIntegrator<Term>* fi)
+  static DenseMatrix<Number>& matrix(InteriorFaceIntegrator<Term>* fi)
   {
     return fi->get_K_plus_plus();
   }
@@ -207,7 +278,7 @@ struct face_select<PLUS,PLUS> {
 template <>
 struct face_select<PLUS,MINUS> {
   template <class Term>
-  static DenseMatrix<Number>& matrix(FaceIntegrator<Term>* fi)
+  static DenseMatrix<Number>& matrix(InteriorFaceIntegrator<Term>* fi)
   {
     return fi->get_K_plus_minus();
   }
@@ -221,7 +292,7 @@ struct face_select<PLUS,MINUS> {
 template <>
 struct face_select<MINUS,PLUS> {
   template <class Term>
-  static DenseMatrix<Number>& matrix(FaceIntegrator<Term>* fi)
+  static DenseMatrix<Number>& matrix(InteriorFaceIntegrator<Term>* fi)
   {
     return fi->get_K_minus_plus();
   }
@@ -235,7 +306,7 @@ struct face_select<MINUS,PLUS> {
 template <>
 struct face_select<MINUS,MINUS> {
   template <class Term>
-  static DenseMatrix<Number>& matrix(FaceIntegrator<Term>* fi)
+  static DenseMatrix<Number>& matrix(InteriorFaceIntegrator<Term>* fi)
   {
     return fi->get_K_minus_minus();
   }
