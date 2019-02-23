@@ -18,8 +18,8 @@ class DG_FaceCoupling
 //----------------------------------------------------------------------
 {
  public:
- DG_FaceCoupling(FE_Wrapper const& fe_plus, FE_Wrapper const& fe_minus):
-   _fe_plus(&fe_plus), _fe_minus(&fe_minus), _n_quad_points(_fe_plus->n_quad_points())
+ DG_FaceCoupling(FE_Wrapper const* fe_plus, FE_Wrapper const* fe_minus=NULL):
+   _fe_plus(fe_plus), _fe_minus(fe_minus), _n_quad_points(_fe_plus->n_quad_points())
   {
     assert(_fe_plus->n_quad_points() == _fe_minus->n_quad_points());
   }
@@ -105,51 +105,35 @@ Number SIP_BilinearForm::_value(unsigned int qp, unsigned int id_u, unsigned int
     + (_penalty/_h_elem) * jump<Elem1>(u)*jump<Elem2>(v);
 }
 
-// //----------------------------------------------------------------------
-// class SIP_BilinearForm: public DG_Term
-// //----------------------------------------------------------------------
-// {
-// public:
-//   SIP_BilinearForm(const DG_FaceCoupling& face_coupling,
-// 		   double penalty, double h_elem):
-//     DG_Term(face_coupling),
-//     _penalty(penalty),
-//     _h_elem(h_elem) {}
+//----------------------------------------------------------------------
+class SIP_LinearForm: public DG_Term
+//----------------------------------------------------------------------
+{
+public:
+  SIP_LinearForm(const DG_FaceCoupling& face_coupling,
+		   double penalty, double h_elem):
+    DG_Term(face_coupling),
+    _penalty(penalty),
+    _h_elem(h_elem) {}
 
-//   // Evalate bilinear form (at current qudrature point) for the
-//   // unknown basis function id_u and the test basis function id_test
-//   Number inline value_plus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const {
-//     return _value<PLUS,PLUS>(qp,id_u,id_test); }
-//   Number inline value_plus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const {
-//     return _value<PLUS,MINUS>(qp,id_u,id_test); }
-//   Number inline value_minus_plus(unsigned int qp, unsigned int id_u, unsigned int id_test) const {
-//     return _value<MINUS,PLUS>(qp,id_u,id_test); }
-//   Number inline value_minus_minus(unsigned int qp, unsigned int id_u, unsigned int id_test) const {
-//     return _value<MINUS,MINUS>(qp,id_u,id_test); }
+  Number value(unsigned int qp, unsigned int id_test) const;
 
-// private:
-//   const double _penalty;
-//   const double _h_elem;
+private:
+  const double _penalty;
+  const double _h_elem;
+};
 
-//     template <CoupledElement Elem1, CoupledElement Elem2>
-//   Number _value(unsigned int qp, unsigned int id_u, unsigned int id_test) const;
-// };
+Number SIP_LinearForm::value(unsigned int qp, unsigned int id_test) const
+{
+  // Normal vector, considered in PLUS orientation
+  auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
+  // Test function
+  auto const& v  = _face.fe<PLUS>().phi[id_test] [qp];
+  auto const& dv = _face.fe<PLUS>().dphi[id_test][qp]; // Gradient
 
-// template <CoupledElement Elem1, CoupledElement Elem2> inline
-// Number SIP_BilinearForm::_value(unsigned int qp, unsigned int id_u, unsigned int id_test) const
-// {
-//   // Normal vector, considered in PLUS orientation
-//   auto const& normal = _face.fe<PLUS>().qrule_normals[qp];
-//   // Unknown
-//   auto const& u  = _face.fe<Elem1>().phi[id_u] [qp];
-//   auto const& du = _face.fe<Elem1>().dphi[id_u][qp]; // Gradient
-//   // Test function
-//   auto const& v  = _face.fe<Elem2>().phi[id_test] [qp];
-//   auto const& dv = _face.fe<Elem2>().dphi[id_test][qp]; // Gradient
-
-//   return - ( mean(du*normal)*jump<Elem2>(v) + jump<Elem1>(u)*mean(dv*normal) )
-//     + (_penalty/_h_elem) * jump<Elem1>(u)*jump<Elem2>(v);
-// }
+  // return - ( mean(du*normal)*jump<Elem2>(v) + jump<Elem1>(u)*mean(dv*normal) )
+  //   + (_penalty/_h_elem) * jump<Elem1>(u)*jump<Elem2>(v);
+}
 
 
 //----------------------------------------------------------------------
